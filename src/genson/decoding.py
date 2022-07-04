@@ -9,6 +9,9 @@ float_re = re.compile("^[0-9]+[.][0-9]*$")
 def is_whitespace(x):
     return x in [" "]
 
+def is_escape(x):
+    return x == "\\"
+
 def read_to_non_whitespace(stream):
     x = stream.read(1)
     while is_whitespace(x):
@@ -204,11 +207,16 @@ class StringContextHandler(ContextHandler):
     def accepts_children(self):
         return False
 
+    def escaped(self):
+        return len(self.input) > 0 and is_escape(self.input[-1])
+
     def is_end_char(self, x):
-        return x in self.end_chars
+        return x in self.end_chars and not self.escaped()
 
     def accept_char(self, x):
         self.is_closed = self.is_closed or self.is_end_char(x)
+        if self.escaped() and not is_escape(x):
+            self.input.pop()
         self.input.append(x)
 
     def accept_item(self, x):
@@ -270,7 +278,7 @@ class JSONStreamDecoder():
 
     def add_char_to_current_context(self, x):
         if self.current_context.is_closed and not is_whitespace(x):
-            raise ValueError("Extra close")
+            raise ValueError("Extra characters after close")
         self.current_context.accept_char(x)
 
     def get_current_context_output(self):

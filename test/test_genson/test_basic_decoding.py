@@ -56,7 +56,7 @@ class TestBasicDecoding(unittest.TestCase):
             decode_json("[1,[2,3]}")
 
     def test_extra_closing(self):
-        with self.assertRaisesRegex(ValueError, "Extra close"):
+        with self.assertRaisesRegex(ValueError, "Extra characters"):
             decode_json("[1,[2,3]]]")
 
     def test_double_comma(self):
@@ -80,9 +80,14 @@ class TestBasicDecoding(unittest.TestCase):
             decode_json('["hello","]')
 
     def test_extra_string_close(self):
-        with self.assertRaisesRegex(ValueError, "Extra close"):
+        with self.assertRaisesRegex(ValueError, "Extra characters"):
             decode_json('"hello""')
 
-    def test_string_escape(self):
+    def test_string_opening_other_context(self):
         self.assertEqual(decode_json('"hello[world"'), "hello[world")
-        # self.assertEqual(decode_json('"hello\"world"'), "hello\"world")
+
+    def test_string_escape(self):
+        self.assertEqual(decode_json('"hello\\"world"'), "hello\"world")
+
+    def test_string_escaped_escape(self):
+        self.assertEqual(decode_json('"hello\\\\world"'), "hello\\world")
