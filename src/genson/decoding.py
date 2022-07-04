@@ -1,4 +1,4 @@
-from typing import Any, Dict, Type
+from typing import Any, Dict, Type, List
 from abc import ABC, abstractmethod
 import re
 import io
@@ -110,6 +110,10 @@ class ContextHandler:
         self.input = []
 
     @abstractmethod
+    def accepts_children(self):
+        pass
+
+    @abstractmethod
     def is_end_char(self, x):
         pass
 
@@ -143,6 +147,9 @@ class IterableContextHandler(ContextHandler):
     @abstractmethod
     def _parse_input_as_item(self):
         pass
+
+    def accepts_children(self):
+        return True
 
     def is_end_char(self, x):
         return x in self.end_chars
@@ -194,8 +201,10 @@ class StringContextHandler(ContextHandler):
         else:
             self.end_chars = end_chars
 
+    def accepts_children(self):
+        return False
+
     def is_end_char(self, x):
-        print(x, self.end_chars, x in self.end_chars)
         return x in self.end_chars
 
     def accept_char(self, x):
@@ -209,9 +218,32 @@ class StringContextHandler(ContextHandler):
         return decode_string("".join(self.input[:-1]))
 
 
+class RootContext(ContextHandler):
+    def __init__(self):
+        super().__init__("")
+        self.output = None
+        self.is_closed = False
+
+    def accepts_children(self):
+        return not self.is_closed
+
+    def is_end_char(self, x):
+        return False
+
+    def accept_char(self, x):
+        pass
+
+    def accept_item(self, x):
+        self.is_closed = True
+        self.output = x
+
+    def get_output(self):
+        return self.output
+
+
 class JSONStreamDecoder():
     def __init__(self, context_handlers):
-        self.context_stack = []
+        self.context_stack: List[ContextHandler] = [RootContext()]
         self.context_handlers = context_handlers
 
     @property
@@ -219,18 +251,17 @@ class JSONStreamDecoder():
         return self.context_stack[-1]
 
     def is_new_context(self, x):
-        ## TODO: There has to be a better way of doing this?
-        ## Renaming IterableContextHandler etc., or adding variable???
-        if len(self.context_stack) > 0 and not isinstance(self.current_context, IterableContextHandler):
-            return False
-        return x in self.context_handlers
+        return self.current_context.accepts_children() and x in self.context_handlers
 
     def enter_context(self, start_char):
         handler = context_handlers[start_char]
         self.context_stack.append(handler(start_char))
 
+    def is_current_context_root(self):
+        return isinstance(self.current_context, RootContext)
+
     def exit_context(self):
-        if len(self.context_stack) > 1:
+        if not self.is_current_context_root():
             output = self.get_current_context_output()
             self.context_stack.pop()
             self.current_context.accept_item(output)
@@ -248,7 +279,7 @@ class JSONStreamDecoder():
         return self.current_context.get_output()
 
     def process_char(self, x):
-        if len(self.context_stack) > 0 and self.current_context.is_end_char(x):
+        if self.current_context.is_end_char(x):
             self.add_char_to_current_context(x)
             self.exit_context()
         elif self.is_new_context(x):
