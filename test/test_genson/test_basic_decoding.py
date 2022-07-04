@@ -59,6 +59,6 @@ class TestBasicDecoding(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Extra characters outside context"):
             decode_json("[1,[2,3]]]")
 
-    # def test_double_comma(self):
-    #     with self.assertRaisesRegex(ValueError, "Empty item"):
-    #         decode_json("[1,,3]")
+    def test_double_comma(self):
+        with self.assertRaisesRegex(ValueError, "Empty item"):
+            decode_json("[1,,3]")

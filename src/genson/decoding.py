@@ -6,6 +6,8 @@ import re
 int_re = re.compile("^[0-9]+$")
 float_re = re.compile("^[0-9]+[.][0-9]*$")
 
+def is_whitespace(x):
+    return x in [" "]
 
 def is_int_match(x):
     return int_re.match(x)
@@ -21,7 +23,6 @@ def decode_float(number_json):
 
 def decode_string(string_json):
     return string_json[1:-1]
-
 
 def decode_item(item_json):
     if len(item_json) == 0:
@@ -117,37 +118,51 @@ class ContextHandler:
         return f"<{self.start_char}:{self.input}->{self.output}>"
 
 
-class ArrayContextHandler(ContextHandler):
-    def __init__(self, enter_char):
+class IterableContextHandler(ContextHandler):
+    def __init__(self, enter_char, start_char, end_chars, item_separators):
         super().__init__(enter_char)
-        self.start_char = "["
-        self.end_char = "]"
+        self.start_char = start_char
+        self.end_chars = end_chars
+        self.item_separators = item_separators
         self.input = []
-        self.output = []
         self.is_closed = False
+        self._just_accepted_output = False
+
+    @abstractmethod
+    def _parse_input_as_item(self):
+        pass
 
     def is_end_char(self, x):
-        return x == self.end_char
+        return x in self.end_chars
 
-    def _parse_item(self):
-        input_str = "".join(self.input).strip()
-        if len(input_str) > 0:
-            self.output.append(decode_item(input_str))
-        self.input = []
+    def is_item_separator(self, x):
+        return x in self.item_separators
 
-    def accept_char(self, x):
+    def validate_input_char(self, x):
         if self.is_closed:
             raise ValueError("Extra characters outside context")
-        if x == self.end_char:
-            self._parse_item()
-            self.is_closed = True
-        elif x == ",":
-            self._parse_item()
+        if self.is_item_separator(x) and not self.is_item_separator_expected():
+            raise ValueError(f"Empty item")
+
+    def accept_char(self, x):
+        self.validate_input_char(x)
+        self.is_closed = self.is_closed or self.is_end_char(x)
+        if self.is_item_separator(x) or self.is_closed:
+            self._parse_input_as_item()
         else:
             self.input.append(x)
+        self._just_accepted_output = False
+        return self.is_closed
+
+    def has_input(self):
+        return len(self.input) > 0
+
+    def is_item_separator_expected(self):
+        return self.has_input() or self._just_accepted_output
 
     def accept_output(self, output):
         self.output.append(output)
+        self._just_accepted_output = True
 
     def get_output(self):
         if not self.is_closed:
@@ -155,42 +170,45 @@ class ArrayContextHandler(ContextHandler):
         return self.output
 
 
+class ArrayContextHandler(IterableContextHandler):
+    def __init__(self, enter_char):
+        super().__init__(enter_char, "[", "]", ",")
+        self.output = []
 
-context_handlers: Dict[str, Type[ContextHandler]] = {
-    "[": ArrayContextHandler,
-    # ",": {"end_char": ",", "handler": ItemHandler}
-}
+    def _parse_input_as_item(self):
+        if self.has_input():
+            self.output.append(decode_item("".join(self.input)))
+        self.input = []
 
-def is_whitespace(x):
-    return x in [" "]
 
 class JSONStreamDecoder():
-    def __init__(self):
+    def __init__(self, context_handlers):
         self.context_stack = []
+        self.context_handlers = context_handlers
 
     @property
     def current_context(self):
         return self.context_stack[-1]
 
+    def is_new_context(self, x):
+        return x in self.context_handlers
+
     def enter_context(self, start_char):
         handler = context_handlers[start_char]
         self.context_stack.append(handler(start_char))
 
-    def exit_context(self, end_char):
-        self.current_context.accept_char(end_char)
+    def exit_context(self):
         if len(self.context_stack) > 1:
-            closed_context = self.context_stack.pop()
-            self.current_context.accept_output(closed_context.get_output())
+            output = self.context_stack.pop().get_output()
+            self.current_context.accept_output(output)
 
     def process_char(self, x):
         if is_whitespace(x):
             pass
-        elif len(self.context_stack) > 0 and self.current_context.is_end_char(x):
-            self.exit_context(x)
-        elif x in context_handlers:
+        elif self.is_new_context(x):
             self.enter_context(x)
-        else:
-            self.current_context.accept_char(x)
+        elif self.current_context.accept_char(x):
+            self.exit_context()
 
     def decode(self, stream):
         x = stream.read(1)
@@ -199,6 +217,11 @@ class JSONStreamDecoder():
             print(x, self.context_stack)
             x = stream.read(1)
         return self.context_stack.pop().get_output()
+
+
+context_handlers: Dict[str, Type[ContextHandler]] = {
+    "[": ArrayContextHandler,
+}
 
 
 def decode_json(json_string: str):
@@ -210,6 +233,4 @@ def decode_json(json_string: str):
     elif json_string[0] == "[":
         import io
         stream = io.StringIO(json_string)
-        # stream.seek(1)
-        # return JSONStreamDecoder().decode(stream, "[")
-        return JSONStreamDecoder().decode(stream)
+        return JSONStreamDecoder(context_handlers).decode(stream)
