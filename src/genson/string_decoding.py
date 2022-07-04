@@ -13,15 +13,15 @@ class StringContextHandler(ContextHandler):
     def accepts_children(self):
         return False
 
-    def escaped(self):
+    def _escaped(self):
         return len(self.input) > 0 and is_escape(self.input[-1])
 
     def is_end_char(self, x):
-        return x in self.end_chars and not self.escaped()
+        return x in self.end_chars and not self._escaped()
 
     def accept_char(self, x):
         self.is_closed = self.is_closed or self.is_end_char(x)
-        if self.escaped() and not is_escape(x):
+        if self._escaped() and not is_escape(x):
             self.input.pop()
         self.input.append(x)
 

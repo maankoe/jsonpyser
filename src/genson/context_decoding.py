@@ -58,25 +58,25 @@ class IterableContextHandler(ContextHandler):
     def is_end_char(self, x):
         return x in self.end_chars
 
-    def is_item_separator(self, x):
+    def _is_item_separator(self, x):
         return x in self.item_separators
 
-    def is_input_char_valid(self, x):
-        if self.is_item_separator(x) and not self.is_item_separator_expected():
+    def _is_input_char_valid(self, x):
+        if self._is_item_separator(x) and not self._is_item_separator_expected():
             raise ValueError(f"Empty item")
         return not is_whitespace(x)
 
+    def _is_item_separator_expected(self):
+        return self.has_input() or self._just_accepted_output
+
     def accept_char(self, x):
-        if self.is_input_char_valid(x):
+        if self._is_input_char_valid(x):
             self.is_closed = self.is_closed or self.is_end_char(x)
-            if self.is_item_separator(x) or self.is_closed:
+            if self._is_item_separator(x) or self.is_closed:
                 self._parse_input_as_item()
             else:
                 self.input.append(x)
             self._just_accepted_output = False
-
-    def is_item_separator_expected(self):
-        return self.has_input() or self._just_accepted_output
 
     def accept_item(self, output):
         self.output.append(output)
