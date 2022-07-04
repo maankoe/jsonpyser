@@ -1,3 +1,5 @@
+from typing import Any, Dict, Type
+from abc import ABC, abstractmethod
 import re
 
 
@@ -86,140 +88,117 @@ def decode_json_string(json_string: str):
         return JSONDecoder().decode(json_string)
 
 
+class ContextHandler:
+    start_char: str
+    end_char: str
+    input: Any
+    output: Any
 
-# class JSONContext:
-#     def __init__(self):
-#         self.output = output
-#         self.context = []
+    def __init__(self, enter_char):
+        self.enter_char = enter_char
+
+    @abstractmethod
+    def is_end_char(self, x):
+        pass
+
+    @abstractmethod
+    def accept_char(self, x):
+        pass
+
+    @abstractmethod
+    def accept_output(self, x):
+        pass
+
+    @abstractmethod
+    def get_output(self):
+        pass
+
+    def __repr__(self):
+        return f"<{self.start_char}:{self.input}->{self.output}>"
 
 
-# class JSONStreamDecoder():
-#     def __init__(self):
-#         self.context = []
-#         self.output = None
-#         self.context_stack = []
-#         self.json_stack = []
-#
-#     def decode_context(self, end_context_char):
-#         context_json = item_json(self.context)
-#         # if end_context_char == "," and len(context_json) == 0:
-#         #     raise ValueError("adsf")
-#         if len(context_json) > 0:
-#             self.output.append(decode_item(context_json))
-#             self.context = []
-#
-#     def decode_array(self, stream):
-#         decoder = JSONStreamDecoder()
-#         data = decoder.decode(stream, "[")
-#         self.output.append(data)
-#
-#     def initialize_output(self, start_char):
-#         if start_char == "[":
-#             self.output = []
-#         self.enter_context("[")
-#
-#     def enter_context(self, open_context_char):
-#         self.context_stack.append(open_context_char)
-#
-#     def exit_context(self, close_context_char):
-#         open_context_char = self.context_stack.pop()
-#         print(open_context_char, close_context_char)
-#         if open_context_char == "[" and close_context_char != "]":
-#             raise ValueError("Mismatching bracket")
-#
-#     def decode(self, stream, context_char):
-#         self.initialize_output(context_char)
-#         x = stream.read(1)
-#         while x:
-#             if x == ",":
-#                 self.decode_context(x)
-#             elif x == "[":
-#                 self.decode_array(stream)
-#             elif x == "]":
-#                 self.decode_context(x)
-#                 self.exit_context(x)
-#                 break
-#             elif x == "}":
-#                 self.exit_context(x)
-#                 break
-#             else:
-#                 self.context.append(x)
-#             x = stream.read(1)
-#         print(self.context_stack, self.context, self.output)
-#         if len(self.context_stack) > 0:
-#             raise ValueError("Unclosed bracket")
-#         return self.output
-
-class JSONContext:
-    def __init__(self, start_char, end_char):
+class ArrayContextHandler(ContextHandler):
+    def __init__(self, enter_char):
+        super().__init__(enter_char)
+        self.start_char = "["
+        self.end_char = "]"
         self.input = []
-        self.start_char = start_char
-        self.end_char = end_char
-        self.initialize_output(start_char)
+        self.output = []
+        self.is_closed = False
 
-    def initialize_output(self, start_char):
-        if start_char == "[":
-            self.output = []
-            self.is_closed = False
-        else:
-            self.is_closed = True
-            self.output = None
+    def is_end_char(self, x):
+        return x == self.end_char
 
-    def parse_input(self):
+    def _parse_item(self):
         input_str = "".join(self.input).strip()
         if len(input_str) > 0:
             self.output.append(decode_item(input_str))
         self.input = []
 
-    def next_char(self, char):
+    def accept_char(self, x):
         if self.is_closed:
             raise ValueError("Extra characters outside context")
-        if char == self.end_char:
-            self.parse_input()
+        if x == self.end_char:
+            self._parse_item()
             self.is_closed = True
-        elif char == ",":
-            self.parse_input()
+        elif x == ",":
+            self._parse_item()
         else:
-            self.input.append(char)
+            self.input.append(x)
 
-    def add_output(self, output):
-        if self.start_char == "[":
-            self.output.append(output)
-        else:
-            self.output = output
+    def accept_output(self, output):
+        self.output.append(output)
 
     def get_output(self):
         if not self.is_closed:
             raise ValueError("Unclosed bracket")
         return self.output
 
-    def __repr__(self):
-        return f"<{self.start_char}:{self.input}->{self.output}>"
 
+
+context_handlers: Dict[str, Type[ContextHandler]] = {
+    "[": ArrayContextHandler,
+    # ",": {"end_char": ",", "handler": ItemHandler}
+}
+
+def is_whitespace(x):
+    return x in [" "]
 
 class JSONStreamDecoder():
     def __init__(self):
-        self.decoder_stack = []
+        self.context_stack = []
+
+    @property
+    def current_context(self):
+        return self.context_stack[-1]
+
+    def enter_context(self, start_char):
+        handler = context_handlers[start_char]
+        self.context_stack.append(handler(start_char))
+
+    def exit_context(self, end_char):
+        self.current_context.accept_char(end_char)
+        if len(self.context_stack) > 1:
+            closed_context = self.context_stack.pop()
+            self.current_context.accept_output(closed_context.get_output())
+
+    def process_char(self, x):
+        if is_whitespace(x):
+            pass
+        elif len(self.context_stack) > 0 and self.current_context.is_end_char(x):
+            self.exit_context(x)
+        elif x in context_handlers:
+            self.enter_context(x)
+        else:
+            self.current_context.accept_char(x)
 
     def decode(self, stream):
         x = stream.read(1)
         while x:
-            if x == " ":
-                pass
-            elif x == ",":
-                self.decoder_stack[-1].next_char(x)
-            elif x == "[":
-                self.decoder_stack.append(JSONContext(x, "]"))
-            elif x == "]":
-                self.decoder_stack[-1].next_char(x)
-                if len(self.decoder_stack) > 1:
-                    closed_context = self.decoder_stack.pop()
-                    self.decoder_stack[-1].add_output(closed_context.get_output())
-            else:
-                self.decoder_stack[-1].next_char(x)
-            print(x, self.decoder_stack)
+            self.process_char(x)
+            print(x, self.context_stack)
             x = stream.read(1)
-        return self.decoder_stack.pop().get_output()
+        return self.context_stack.pop().get_output()
 
 
 def decode_json(json_string: str):
