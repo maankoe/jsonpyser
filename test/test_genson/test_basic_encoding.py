@@ -1,10 +1,10 @@
 import unittest
 
 
-from genson.main import dump_jsonable
+from genson.encoding import dump_jsonable
 
 
-class TestGenson(unittest.TestCase):
+class TestBasicEncoding(unittest.TestCase):
     def test_returns_string(self):
         self.assertIsInstance(dump_jsonable({}), str)
 

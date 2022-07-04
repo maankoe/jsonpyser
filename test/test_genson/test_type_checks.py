@@ -4,7 +4,7 @@ import unittest
 from genson.json_typing import *
 
 
-class TestGenson(unittest.TestCase):
+class TestTypeChecks(unittest.TestCase):
     def test_is_map(self):
         self.assertTrue(is_map({}))
         self.assertTrue(is_map({"a": "b"}))
