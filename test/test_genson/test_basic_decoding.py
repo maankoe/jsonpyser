@@ -44,21 +44,45 @@ class TestBasicDecoding(unittest.TestCase):
         self.assertEqual(decode_json("[[1, [2, 3], 4], [3, 4], 5]"), [[1, [2, 3], 4], [3, 4], 5])
 
     def test_bad_unclosed_list(self):
-        with self.assertRaisesRegex(ValueError, "Unclosed bracket"):
+        with self.assertRaisesRegex(ValueError, "unclosed context"):
             decode_json("[1,2")
 
     def test_bad_unclosed_list_with_inner_closed_at_end(self):
-        with self.assertRaisesRegex(ValueError, "Unclosed bracket"):
+        with self.assertRaisesRegex(ValueError, "unclosed context"):
             decode_json("[1,[2,3]")
 
     def test_mismatching_brace(self):
-        with self.assertRaisesRegex(ValueError, "Unclosed bracket"):
+        with self.assertRaisesRegex(ValueError, "unclosed context"):
             decode_json("[1,[2,3]}")
 
     def test_extra_closing(self):
-        with self.assertRaisesRegex(ValueError, "Extra characters outside context"):
+        with self.assertRaisesRegex(ValueError, "Extra close"):
             decode_json("[1,[2,3]]]")
 
     def test_double_comma(self):
         with self.assertRaisesRegex(ValueError, "Empty item"):
             decode_json("[1,,3]")
+
+    def test_no_context_list(self):
+        with self.assertRaisesRegex(ValueError, "Unrecognised item"):
+            decode_json("1, 2, 3")
+
+    def test_string_context(self):
+        self.assertEqual(decode_json('"hello world"'), "hello world")
+        self.assertEqual(decode_json('["hello world"]'), ["hello world"])
+
+    def test_unclosed_string(self):
+        with self.assertRaisesRegex(ValueError, "unclosed context"):
+            decode_json('"hello world')
+
+    def test_unclosed_string_in_array(self):
+        with self.assertRaisesRegex(ValueError, "unclosed context"):
+            decode_json('["hello","]')
+
+    def test_extra_string_close(self):
+        with self.assertRaisesRegex(ValueError, "Extra close"):
+            decode_json('"hello""')
+
+    def test_string_escape(self):
+        self.assertEqual(decode_json('"hello[world"'), "hello[world")
+        # self.assertEqual(decode_json('"hello\"world"'), "hello\"world")
