@@ -2,11 +2,17 @@ from typing import Dict, Iterable, AnyStr
 
 from genson.json_typing import *
 
-def dump_object(jsonable_object):
-    if is_str(jsonable_object):
-        return '"' + jsonable_object + '"'
-    elif is_number(jsonable_object):
-        return repr(jsonable_object)
+def dump_str(string):
+    return '"' + string + '"'
+
+def dump_number(number):
+    return repr(number)
+
+def dump_object(object):
+    if is_str(object):
+        return dump_str(object)
+    elif is_number(object):
+        return repr(object)
 
 # def dump_array(jsonable_array):
 #     inner_str = ', '.join(jsonable_array)
