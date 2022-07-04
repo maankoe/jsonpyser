@@ -1,3 +1,4 @@
+import re
 import unittest
 
 from genson.decoding import decode_json
@@ -41,3 +42,19 @@ class TestBasicDecoding(unittest.TestCase):
 
     def test_decode_double_nested_int_list(self):
         self.assertEqual(decode_json("[[1, [2, 3], 4], [3, 4], 5]"), [[1, [2, 3], 4], [3, 4], 5])
+
+    def test_bad_unclosed_list(self):
+        with self.assertRaisesRegex(ValueError, "Unclosed bracket"):
+            decode_json("[1,2")
+
+    def test_bad_unclosed_list_with_inner_closed_at_end(self):
+        with self.assertRaisesRegex(ValueError, "Unclosed bracket"):
+            decode_json("[1,[2,3]")
+
+    def test_mismatching_brace(self):
+        with self.assertRaisesRegex(ValueError, "Mismatching bracket"):
+            decode_json("[1,[2,3]}")
+
+    # def test_double_comma(self):
+    #     with self.assertRaisesRegex(ValueError, "Empty item"):
+    #         decode_json("[1,,3]")

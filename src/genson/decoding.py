@@ -75,7 +75,8 @@ class JSONDecoder():
             self.pos += 1
         return self.output
 
-def decode_json(json_string: str):
+
+def decode_json_string(json_string: str):
     json_string = json_string.lstrip()
     if len(json_string) == 0:
         return None
@@ -83,3 +84,74 @@ def decode_json(json_string: str):
         return decode_item(json_string.strip())
     elif json_string[0] == "[":
         return JSONDecoder().decode(json_string)
+
+
+
+class JSONStreamDecoder():
+    def __init__(self):
+        self.context = []
+        self.output = None
+        self.context_stack = []
+
+    def decode_context(self, end_context_char):
+        context_json = item_json(self.context)
+        # if end_context_char == "," and len(context_json) == 0:
+        #     raise ValueError("adsf")
+        if len(context_json) > 0:
+            self.output.append(decode_item(context_json))
+            self.context = []
+
+    def decode_array(self, stream):
+        decoder = JSONStreamDecoder()
+        data = decoder.decode(stream, "[")
+        self.output.append(data)
+
+    def initialize_output(self, start_char):
+        if start_char == "[":
+            self.output = []
+        self.enter_context("[")
+
+    def enter_context(self, open_context_char):
+        self.context_stack.append(open_context_char)
+
+    def exit_context(self, close_context_char):
+        open_context_char = self.context_stack.pop()
+        print(open_context_char, close_context_char)
+        if open_context_char == "[" and close_context_char != "]":
+            raise ValueError("Mismatching bracket")
+
+    def decode(self, stream, context_char):
+        self.initialize_output(context_char)
+        x = stream.read(1)
+        while x:
+            if x == ",":
+                self.decode_context(x)
+            elif x == "[":
+                self.decode_array(stream)
+            elif x == "]":
+                self.decode_context(x)
+                self.exit_context(x)
+                break
+            elif x == "}":
+                self.exit_context(x)
+                break
+            else:
+                self.context.append(x)
+            x = stream.read(1)
+        print(self.context_stack, self.context, self.output)
+        if len(self.context_stack) > 0:
+            raise ValueError("Unclosed bracket")
+        return self.output
+
+
+def decode_json(json_string: str):
+    json_string = json_string.lstrip()
+    if len(json_string) == 0:
+        return None
+    elif json_string[0] != "[":
+        return decode_item(json_string.strip())
+    elif json_string[0] == "[":
+        import io
+        stream = io.StringIO(json_string)
+        stream.seek(1)
+        return JSONStreamDecoder().decode(stream, "[")
