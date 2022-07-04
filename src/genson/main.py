@@ -1,5 +1,3 @@
-from typing import Dict, Iterable, AnyStr
-
 from genson.json_typing import *
 
 def dump_string(string):
@@ -25,6 +23,9 @@ def dump_dictionary(map):
     inner_str = ', '.join(dump_key_value_pair(k, v) for k, v in map.items())
     return "{" + inner_str + "}"
 
+def dump_null():
+    return "null"
+
 def dump_jsonable(jsonable) -> str:
     if is_object(jsonable):
         return dump_object(jsonable)
@@ -32,3 +33,5 @@ def dump_jsonable(jsonable) -> str:
         return dump_array(jsonable)
     elif is_map(jsonable):
         return dump_dictionary(jsonable)
+    elif is_null(jsonable):
+        return dump_null()

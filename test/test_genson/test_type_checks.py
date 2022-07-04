@@ -16,6 +16,7 @@ class TestGenson(unittest.TestCase):
         self.assertFalse(is_map([1, 2, 3]))
         self.assertFalse(is_map(("a", 1, 2, )))
         self.assertFalse(is_map(("a", {"a": "b"})))
+        self.assertFalse(is_map(None))
 
     def test_is_str(self):
         self.assertTrue(is_str("asdf"))
@@ -28,6 +29,7 @@ class TestGenson(unittest.TestCase):
         self.assertFalse(is_str({2: 1}))
         self.assertFalse(is_str({2: ["a", "b"]}))
         self.assertFalse(is_str(1))
+        self.assertFalse(is_str(None))
 
     def test_is_array(self):
         self.assertTrue(is_array([1, 2, 3]))
@@ -40,6 +42,7 @@ class TestGenson(unittest.TestCase):
         self.assertFalse(is_array({2: ["a", "b"]}))
         self.assertFalse(is_array("asdf"))
         self.assertFalse(is_array(1))
+        self.assertFalse(is_array(None))
 
     def test_is_object(self):
         self.assertTrue(is_object("asdf"))
@@ -52,6 +55,7 @@ class TestGenson(unittest.TestCase):
         self.assertFalse(is_object({"a": 1}))
         self.assertFalse(is_object({2: 1}))
         self.assertFalse(is_object({2: ["a", "b"]}))
+        self.assertFalse(is_object(None))
 
     def test_is_number(self):
         self.assertTrue(is_number(1))
@@ -66,4 +70,18 @@ class TestGenson(unittest.TestCase):
         self.assertFalse(is_number({"a": 1}))
         self.assertFalse(is_number({2: 1}))
         self.assertFalse(is_number({2: ["a", "b"]}))
+        self.assertFalse(is_number(None))
+
+    def test_is_null(self):
+        self.assertTrue(is_null(None))
+        self.assertFalse(is_null(1))
+        self.assertFalse(is_null("asdf"))
+        self.assertFalse(is_null([1, 2, 3]))
+        self.assertFalse(is_null(("a", 1, 2, )))
+        self.assertFalse(is_null(("a", {"a": "b"})))
+        self.assertFalse(is_null({}))
+        self.assertFalse(is_null({"a": "b"}))
+        self.assertFalse(is_null({"a": 1}))
+        self.assertFalse(is_null({2: 1}))
+        self.assertFalse(is_null({2: ["a", "b"]}))
 
