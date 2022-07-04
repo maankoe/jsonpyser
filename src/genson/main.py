@@ -5,7 +5,7 @@ from genson.json_typing import *
 def dump_object(jsonable_object):
     if is_str(jsonable_object):
         return '"' + jsonable_object + '"'
-    elif is_int(jsonable_object):
+    elif is_number(jsonable_object):
         return repr(jsonable_object)
 
 # def dump_array(jsonable_array):

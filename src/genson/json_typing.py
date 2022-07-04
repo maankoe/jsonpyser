@@ -13,5 +13,5 @@ def is_object(x):
 def is_str(x):
     return isinstance(x, str)
 
-def is_int(x):
-    return isinstance(x, int)
+def is_number(x):
+    return isinstance(x, int) or isinstance(x, float)
