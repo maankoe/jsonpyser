@@ -2,15 +2,15 @@ import re
 
 
 int_re = re.compile("^[0-9]+$")
-float_re = re.compile("^[0-9]+[.][0-9]*$")
+float_re = re.compile("^[0-9]*[.]?[0-9]*$")
 
 
 def is_escape(x):
-    return x == "\\"
+    return len(x) == 1 and x == "\\"
 
 
 def is_whitespace(x):
-    return x in [" "]
+    return all(_ in "\t " for _ in x)
 
 
 def read_to_non_whitespace(stream):
@@ -21,11 +21,11 @@ def read_to_non_whitespace(stream):
 
 
 def is_int_match(x):
-    return int_re.fullmatch(x)
+    return int_re.fullmatch(x) is not None
 
 
 def is_float_match(x):
-    return float_re.fullmatch(x)
+    return float_re.fullmatch(x) is not None
 
 
 def decode_int(number_json):
