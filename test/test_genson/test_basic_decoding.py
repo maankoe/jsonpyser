@@ -52,8 +52,12 @@ class TestBasicDecoding(unittest.TestCase):
             decode_json("[1,[2,3]")
 
     def test_mismatching_brace(self):
-        with self.assertRaisesRegex(ValueError, "Mismatching bracket"):
+        with self.assertRaisesRegex(ValueError, "Unclosed bracket"):
             decode_json("[1,[2,3]}")
+
+    def test_extra_closing(self):
+        with self.assertRaisesRegex(ValueError, "Extra characters outside context"):
+            decode_json("[1,[2,3]]]")
 
     # def test_double_comma(self):
     #     with self.assertRaisesRegex(ValueError, "Empty item"):
