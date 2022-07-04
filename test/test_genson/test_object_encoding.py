@@ -1,4 +1,3 @@
-import dataclasses
 import unittest
 from dataclasses import dataclass
 
