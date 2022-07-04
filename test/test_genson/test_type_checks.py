@@ -5,17 +5,17 @@ from genson.json_typing import *
 
 
 class TestGenson(unittest.TestCase):
-    def test_is_dict(self):
-        self.assertTrue(is_dict({}))
-        self.assertTrue(is_dict({"a": "b"}))
-        self.assertTrue(is_dict({"a": 1}))
-        self.assertTrue(is_dict({2: 1}))
-        self.assertTrue(is_dict({2: ["a", "b"]}))
-        self.assertFalse(is_dict("asdf"))
-        self.assertFalse(is_dict(1))
-        self.assertFalse(is_dict([1, 2, 3]))
-        self.assertFalse(is_dict(("a", 1, 2, )))
-        self.assertFalse(is_dict(("a", {"a": "b"})))
+    def test_is_map(self):
+        self.assertTrue(is_map({}))
+        self.assertTrue(is_map({"a": "b"}))
+        self.assertTrue(is_map({"a": 1}))
+        self.assertTrue(is_map({2: 1}))
+        self.assertTrue(is_map({2: ["a", "b"]}))
+        self.assertFalse(is_map("asdf"))
+        self.assertFalse(is_map(1))
+        self.assertFalse(is_map([1, 2, 3]))
+        self.assertFalse(is_map(("a", 1, 2, )))
+        self.assertFalse(is_map(("a", {"a": "b"})))
 
     def test_is_str(self):
         self.assertTrue(is_str("asdf"))

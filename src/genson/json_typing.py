@@ -1,14 +1,14 @@
 from typing import Dict, Iterable
 
 
-def is_dict(x):
+def is_map(x):
     return isinstance(x, Dict)
 
 def is_array(x):
-    return isinstance(x, Iterable) and not is_dict(x) and not is_str(x)
+    return isinstance(x, Iterable) and not is_map(x) and not is_str(x)
 
 def is_object(x):
-    return not is_dict(x) and not is_array(x)
+    return not is_map(x) and not is_array(x)
 
 def is_str(x):
     return isinstance(x, str)
